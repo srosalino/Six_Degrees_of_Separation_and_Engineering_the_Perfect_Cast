@@ -11,31 +11,91 @@ that co-participated in movies. We will do some simple descriptive analysis, and
 relate an actor/actress’s position in the social network with the success of the movies in which they
 participate.
 
-#### Rules & Notes - Please take your time to read the following points:
-
-1. The submission deadline shall be set for the 10th of June at 23:59.
-2. It is acceptable that you **discuss** with your colleagues different approaches to solve each step of the problem set. You are responsible for writing your own code, and analysing the results. Clear cases of cheating will be penalized with 0 points in this assignment;
-3. After review of your submission files, and before a mark is attributed, you might be called to orally defend your submission;
-4. You will be scored first and foremost by the number of correct answers, secondly by the logic used in the trying to approach each step of the problem set;
-5. Consider skipping questions that you are stuck in, and get back to them later;
-6. Expect computations to take a few minutes to finish in some of the steps.
-7. **IMPORTANT** It is expected you have developed skills beyond writting SQL queries. Any question where you directly write a SQL query (then for example create a temporary table and use spark.sql to pass the query) will receive a 25% penalty. Using the Spark syntax (for example dataframe.select("\*").where("conditions")) is acceptable and does not incur this penalty. Comment your code in a reasonable fashion.
-8. **Questions** – Any questions about this assignment should be posted in the Forum@Moodle. The last class will be an open office session for anyone with questions concerning the assignment. 
-9. **Delivery** - To fulfil this activity you will have to upload the following materials to Moodle:
-    1. An exported IPython notebook. The notebook should be solved (have results displayed), but should contain all neccesary code so that when the notebook is run in databricks it should also replicate these results. This means the all data downloading and processing should be done in this notebook. It is also important you clearly indicate where your final answer to each question is when you are using multiple cells (for example you print "my final anwser is" before your answer or use cell comments). Please make sure to name your file in the following way: *[student_number1]_[student_number2]_submission.ipynb*. As an example: *19740001_197400010_submission.ipynb*
-    2. **Delivery** - You will also need to provide a signed statement of authorship, which is present in the last page;
-    3. It is recommended you read the whole assignment before starting.
-    4. You can add as many cells as you like to answer the questions.
-    5. You can make use of caching or persisting your RDDs or Dataframes, this may speed up performance.
-    6. If you have trouble with graphframes in databricks (specifically the import statement) you need to make sure the graphframes package is installed on the cluster you are running. If you click home on the left, then click on the graphframes library, from where you can install the package on your cluster (check the graphframes checkbox and click install). Another installation option is using the JAR available on Moodle with the graphframes library.
-10. **Note**: By including the name and student number of each group member  in the submission notebook, this will be considered as a declaration of authorship.
-
-#### Data Sources and Description
-We will use data from IMDB. You can download raw datafiles
-from https://datasets.imdbws.com. Note that the files are tab delimited (.tsv) You can find a
-description of the each datafile in https://www.imdb.com/interfaces/
-
 
 ## Questions
 ### Data loading and preperation
 Review the file descriptions and load the necessary data onto your databricks cluser and into spark dataframes. You will need to use shell commands to download the data, unzip the data, load the data into spark. Note that the data might require parsing and preprocessing to be ready for the questions below.
+
+
+### Network Inference, Let’s build a network
+In the following questions you will look to summarise the data and build a network. We want to examine a network that abstracts how actors and actress are related through their co-participation in movies. To that end perform the following steps:
+
+**Q1** Create a DataFrame that combines **all the information** on each of the titles (i.e., movies, tv-shows, etc …) and **all of the information** the participants in those movies (i.e., actors, directors, etc … ), make sure the actual names of the movies and participants are included. It may be worth reviewing the following questions to see how this dataframe will be used.
+
+How many rows does your dataframe have?
+
+
+**Q2** Create a new DataFrame based on the previous step, with the following removed:
+1. Any participant that is not an actor or actress (as measured by the category column);
+1. All adult movies;
+1. All dead actors or actresses;
+1. All actors or actresses born before 1920 or with no date of birth listed;
+1. All titles that are not of the type movie.
+
+How many rows does your dataframe have?
+
+
+**Q3** Convert the above Dataframe to an RDD. Use map and reduce to create a paired RDD which counts how many movies each actor / actress appears in.
+
+Display names of the top 10 actors/actresses according to the number of movies in which they appeared. Be careful to deal with different actors / actresses with the same name, these could be different people.
+
+
+**Q4** Start with the dataframe from Q2. Generate a DataFrame that lists all links of your network. Here we shall consider that a link connects a pair of actors/actresses if they participated in at least one movie together (actors / actresses should be represented by their unique ID's). For every link we then need anytime a pair of actors were together in a movie as a link in each direction (A -> B and B -> A). However links should be distinct we do not need duplicates when two actors worked together in several movies. 
+
+Display a DataFrame with the first 10 edges.
+
+
+**Q5** Compute the page rank of each actor. This can be done using GraphFrames or
+by using RDDs and the iterative implementation of the PageRank algorithm. Do not take
+more than 5 iterations and use reset probility = 0.1.
+
+List the top 10 actors / actresses by pagerank.
+
+
+**Q6**: Create an RDD with the number of outDegrees for each actor. Display the top 10 by outdegrees.
+
+
+### Let’s play Kevin’s own game
+
+**Q7** Start with the graphframe / dataframe you developed in the previous questions. Using Spark GraphFrame and/or Spark Core library perform the following steps:
+
+1. Identify the id of Kevin Bacon, there are two actors named ‘Kevin Bacon’, we will use the one with the highest degree, that is, the one that participated in most titles;
+1. Estimate the shortest path between every actor in the database actors and Kevin Bacon, keep a dataframe with this information as you will need it later;
+1. Summarise the data, that is, count the number of actors at each number of degress from kevin bacon (you will need to deal with actors unconnected to kevin bacon, if not connected to Kevin Bacon given these actors / actresses a score/degree of 20).
+
+
+### Exploring the data with RDD's
+
+Using RDDs and (not dataframes) answer the following questions (if you loaded your data into spark in a dataframe you can convert to an RDD of rows easily using `.rdd`):
+
+**Q8** Movies can have multiple genres. Considering only titles of the type 'movie' what is the combination of genres that is the most popluar (as measured by number of reviews). Hint: paired RDD's will be useful.
+
+
+**Q9** Movies can have multiple genres. Considering only titles of the type 'movie', and movies with more than 400 ratings, what is the combination of genres that has the highest **average movie rating** (you can average the movie rating for each movie in that genre combination). Hint: paired RDD's will be useful.
+
+
+**Q10** Movies can have multiple genres. What is **the individual genre** which is the most popular as meaured by number of votes. Votes for multiple genres count towards each genre listed. Hint: flatmap and pairedRDD's will be useful here.
+
+
+## Engineering the perfect cast
+We have created a number of potential features for predicting the rating of a movie based on its cast. Use sparkML to build a simple linear model to predict the rating of a movie based on the following features:
+
+1. The total number of movies in which the actors / actresses have acted (based on Q3)
+1. The average pagerank of the cast in each movie (based on Q5)
+1. The average outDegree of the cast in each movie (based on Q6)
+1. The average value for for the cast of degrees of Kevin Bacon (based on Q7).
+
+You will need to create a dataframe with the required features and label. Use a pipeline to create the vectors required by sparkML and apply the model. Remember to split your dataset, leave 30% of the data for testing, when splitting your data use the option seed=0.
+
+**Q11** Provide the coefficients of the regression and the accuracy of your model on that test dataset according to RSME.
+
+
+**Q12** What score would your model predict for the 1997 movie Titanic.
+
+
+**Q13** Create dummy variables for each of the top 10 movie genres for Q10. These variable should have a value of 1 if the movie was rated with that genre and 0 otherwise. For example the 1997 movie Titanic should have a 1 in the dummy variable column for Romance, and a 1 in the dummy variable column for Drama, and 0's in all the other dummy variable columns.
+
+Does adding these variable to the regression improve your results? What is the new RMSE and predicted rating for the 1997 movie Titanic.
+
+
+**Q14 - Open Question**: Improve your model by testing different machine learning algorithms, using hyperparameter tuning on these algorithms, changing the included features. What is the RMSE of you final model and what rating does it predict for the 1997 movie Titanic.
